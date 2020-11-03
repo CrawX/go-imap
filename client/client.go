@@ -525,6 +525,8 @@ func (c *Client) handleGreetAndStartReading() error {
 // This function should not be called directly, it must only be used by
 // libraries implementing extensions of the IMAP protocol.
 func (c *Client) Upgrade(upgrader imap.ConnUpgrader) error {
+	// Flag connection as in upgrading
+	c.upgrading = true
 	return c.conn.Upgrade(upgrader)
 }
 
@@ -552,9 +554,7 @@ func (c *Client) LoggedOut() <-chan struct{} {
 func (c *Client) SetDebug(w io.Writer) {
 	// Need to send a command to unblock the reader goroutine.
 	cmd := new(commands.Noop)
-	err := c.Upgrade(func(conn net.Conn) (net.Conn, error) {
-		// Flag connection as in upgrading
-		c.upgrading = true
+	err := c.Upgrade(func(conn net.Conn, waitReady func()) (net.Conn, error) {
 		if status, err := c.execute(cmd, nil); err != nil {
 			return nil, err
 		} else if err := status.Err(); err != nil {
@@ -562,7 +562,7 @@ func (c *Client) SetDebug(w io.Writer) {
 		}
 
 		// Wait for reader to block.
-		c.conn.WaitReady()
+		waitReady()
 
 		c.conn.SetDebug(w)
 		return conn, nil

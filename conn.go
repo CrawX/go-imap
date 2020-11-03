@@ -51,7 +51,7 @@ const (
 //
 // This should only be used by libraries implementing an IMAP extension (e.g.
 // COMPRESS).
-type ConnUpgrader func(conn net.Conn) (net.Conn, error)
+type ConnUpgrader func(conn net.Conn, waitReady func()) (net.Conn, error)
 
 type Waiter struct {
 	start    sync.WaitGroup
@@ -255,7 +255,7 @@ func (c *Conn) Upgrade(upgrader ConnUpgrader) error {
 	w := c.createWaiter()
 	defer w.Close()
 
-	upgraded, err := upgrader(c.Conn)
+	upgraded, err := upgrader(c.Conn, w.WaitReady)
 	if err != nil {
 		return err
 	}

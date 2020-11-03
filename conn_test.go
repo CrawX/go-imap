@@ -79,9 +79,9 @@ func TestConn_Upgrade(t *testing.T) {
 	ic := imap.NewConn(c, r, w)
 
 	began := make(chan struct{})
-	go ic.Upgrade(func(conn net.Conn) (net.Conn, error) {
+	go ic.Upgrade(func(conn net.Conn, waitReady func()) (net.Conn, error) {
 		began <- struct{}{}
-		ic.WaitReady()
+		waitReady()
 		return &upgraded{conn}, nil
 	})
 	<-began
